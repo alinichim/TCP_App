@@ -2,23 +2,22 @@
 #include <sys/socket.h>
 #include <poll.h>
 
-#define DEBUG_SE
-#define LOG_SE_FILE "logs_server.log"
+#include "config.h"
 
-#ifdef DEBUG_SE
+#ifdef LOG_SE
 
 #include "logger.h"
 
-#endif  // DEBUG_SE
+#endif  // LOG_SE
 
 int main(void) {
   
-  #ifdef DEBUG_SE
+  #ifdef LOG_SE
 
   logger_init(LOG_SE_FILE);
   logger_info("Logger initialized!");
 
-  #endif  // DEBUG_SE
+  #endif  // LOG_SE
 
   // TODO: Server functionality.
   

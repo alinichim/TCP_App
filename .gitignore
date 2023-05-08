@@ -1,3 +1,6 @@
 Enunt_Tema_2_Protocoale_2022_2023.pdf
 .vscode
 build/*
+logs/*
+subscriber
+server
