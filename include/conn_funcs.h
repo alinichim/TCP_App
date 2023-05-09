@@ -17,8 +17,9 @@ int reliable_send(int sockfd, void *data, int data_size);
  * 
  * @param sockfd The socket file descriptor.
  * @param data Location to store data.
+ * @param data_size Size of data.
  * @return Number of packets recieved.
  */
-int reliable_receive(int sockfd, void *data);
+int reliable_receive(int sockfd, void *data, int data_size);
 
 #endif  // CONN_FUNCS_H_

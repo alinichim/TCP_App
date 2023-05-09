@@ -25,6 +25,8 @@
 
 int main(int argc, char *argv[]) {
   
+  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+  
   #ifdef LOG_SE
 
   logger_init(LOG_SE_FILE);
@@ -146,12 +148,6 @@ int main(int argc, char *argv[]) {
   client_p.events = POLLIN;
   conns.push_back(client_p);
 
-  #ifdef LOG_SE
-
-  logger_info("Polls created");
-
-  #endif  // LOG_SE
-
   // Begin communication process.
   int new_client_sockfd;  // Used to register a new client.
   struct sockaddr_in new_client_sockaddr;  // Used to store new client address.
@@ -174,7 +170,7 @@ int main(int argc, char *argv[]) {
 
       // Await connection token from client.
       conn_token_t token;
-      reliable_receive(new_client_sockfd, &token);
+      reliable_receive(new_client_sockfd, &token, sizeof(token));
 
       #ifdef LOG_SE
 
@@ -219,9 +215,10 @@ int main(int argc, char *argv[]) {
 
           // Send messages queued for the client.
           conn_token_t send_token;
+          send_token.ctype = UPDATE;
           while (!client_subs[client_id].msg_q.empty()) {
-            send_token.ctype = UPDATE;
-            memcpy(&send_token.data.message, &client_subs[client_id].msg_q.front(), sizeof(client_msg_t));
+            client_msg_t qmsg = client_subs[client_id].msg_q.front();
+            memcpy(&send_token.data.message, &qmsg, sizeof(client_msg_t));
             client_subs[client_id].msg_q.pop();
             reliable_send(new_client_sockfd, &send_token, sizeof(send_token));
           }
@@ -246,28 +243,11 @@ int main(int argc, char *argv[]) {
       std::cout << "New client " << token.client_id << " connected from ";
       std::cout << addr << ":" << new_client_sockaddr.sin_port << std::endl;
 
-      #ifdef LOG_SE
-
-      logger_info("Adding new socket to polls...");
-
-      #endif  // LOG_SE
-
       // Add socket to polls.
       struct pollfd new_poll;
       new_poll.fd = new_client_sockfd;
       new_poll.events = POLLIN;
       conns.push_back(new_poll);
-
-      #ifdef LOG_SE
-
-      std::string log_msg = "Current polls: ";
-      for (auto it = conns.begin(); it != conns.end(); ++it) {
-        log_msg += std::to_string(it->fd);
-        log_msg += " ";
-      }
-      logger_info(log_msg);
-
-      #endif  // LOG_SE
 
       continue;
     }
@@ -282,17 +262,7 @@ int main(int argc, char *argv[]) {
     poll(conns.data(), conns.size(), POLL_TIMEOUT);
 
     for (struct pollfd conn : conns) {
-      #ifdef LOG_SE
-
-      logger_info("Polls: Checking socket " + std::to_string(conn.fd));
-
-      #endif  // LOG_SE
       if (conn.revents & POLLIN) {
-        #ifdef LOG_SE
-
-        logger_info("Found connection with new input");
-
-        #endif  // LOG_SE
         // Check if this is input from STDIN.
         if (conn.fd == STDIN_FILENO) {
           std::string cmd;
@@ -345,6 +315,13 @@ int main(int argc, char *argv[]) {
           // Send the update to all connected TCP clients and enqueue for TCP clients that are not connected and have
           // SF activated.
           std::string topic_name = datagram.topic_name;
+
+          #ifdef LOG_SE
+
+          logger_info("Datagram topic name: " + topic_name);
+
+          #endif  // LOG_SE
+
           client_msg_t update;
           memcpy(update.topic_name, datagram.topic_name, sizeof(datagram.topic_name));
           memcpy(&update.udp_client_addr, &client_udp_addr, sizeof(client_udp_addr));
@@ -354,12 +331,22 @@ int main(int argc, char *argv[]) {
             for (std::string tname : it->second.topics) {
               if (tname == topic_name) {
                 if (it->second.connected) {
+                  #ifdef LOG_SE
+
+                  logger_info("Sending UPDATE to TCP client");
+
+                  #endif  // LOG_SE
                   // Send update.
                   conn_token_t ctoken;
-                  ctoken.ctype = UPDATE;;
+                  ctoken.ctype = UPDATE;
                   memcpy(&ctoken.data.message, &update, sizeof(update));
                   reliable_send(it->second.sockfd, &ctoken, sizeof(ctoken));
                 } else if (it->second.sf) {
+                  #ifdef LOG_SE
+
+                  logger_info("Enqueuing update...");
+
+                  #endif  // LOG_SE
                   // Enqueue update.
                   it->second.msg_q.push(update);
                 }
@@ -378,20 +365,9 @@ int main(int argc, char *argv[]) {
 
         // Check token from TCP client.
         conn_token_t ctoken;
-        reliable_receive(conn.fd, &ctoken);
-
-        #ifdef LOG_SE
-
-        logger_info("Received token type: " + std::to_string(ctoken.ctype));
-
-        #endif  // LOG_SE
+        reliable_receive(conn.fd, &ctoken, sizeof(ctoken));
 
         if (ctoken.ctype == DISCONNECT) {
-          #ifdef LOG_SE
-
-          logger_info("Token type: DISCONNECT");
-
-          #endif  // LOG_SE
 
           // Close connection.
           close(conn.fd);
@@ -412,22 +388,19 @@ int main(int argc, char *argv[]) {
           break;
   
         } else if (ctoken.ctype == SUBS) {
-          #ifdef LOG_SE
-
-          logger_info("Token type: SUBS");
-
-          #endif  // LOG_SE
 
           // Add new subscription.
           std::string clid = ctoken.client_id;
-          client_subs[clid].topics.push_back(ctoken.data.sub_data.topic_name);
+          std::string new_topic = ctoken.data.sub_data.topic_name;
+          client_subs[clid].topics.push_back(new_topic);
           client_subs[clid].sf = ctoken.data.sub_data.sf;
-        } else if (ctoken.ctype == UNSUB) {
+
           #ifdef LOG_SE
 
-          logger_info("Token type: UNSUB");
+          logger_info("Subscribed " + clid + " to " + new_topic);
 
           #endif  // LOG_SE
+        } else if (ctoken.ctype == UNSUB) {
 
           // Remove subscription.
           std::string clid = ctoken.client_id;

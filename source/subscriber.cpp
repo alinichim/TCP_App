@@ -16,6 +16,9 @@
 #define ARGN 4
 
 int main(int argc, char *argv[]) {
+
+  setvbuf(stdout, NULL, _IONBF, BUFSIZ);
+
   #ifdef LOG_SU
 
   // Initialize logger.
@@ -38,19 +41,6 @@ int main(int argc, char *argv[]) {
 
     exit(EXIT_FAILURE);
   }
-
-  #ifdef LOG_SU
-
-  std::string log_msg = "Program recieved arguments: ";
-  log_msg += argv[1];
-  log_msg += " ";
-  log_msg += argv[2];
-  log_msg += " ";
-  log_msg += argv[3];
-
-  logger_info(log_msg);
-
-  #endif  // LOG_SU
 
   // Create socket.
   int sockfd;
@@ -84,11 +74,6 @@ int main(int argc, char *argv[]) {
   // For server.
   conns[1].fd = sockfd;
   conns[1].events = POLLIN;
-  #ifdef LOG_SU
-
-  logger_info("Registered file descriptors");
-
-  #endif  // LOG_SU
 
   // Build server address.
   struct sockaddr_in server_addr;
@@ -129,12 +114,6 @@ int main(int argc, char *argv[]) {
   memcpy(ctoken.client_id, argv[1], strlen(argv[1]) + 1);
   reliable_send(sockfd, &ctoken, sizeof(ctoken));
 
-  #ifdef LOG_SU
-
-  logger_success("CONNECT sent...");
-
-  #endif  // LOG_SU
-
   // Begin communication process.
   bool exit = false;
   while (!exit) {
@@ -164,6 +143,7 @@ int main(int argc, char *argv[]) {
         // Prepare token.
         memset(&ctoken, 0, sizeof(ctoken));
         ctoken.ctype = SUBS;
+        strncpy(ctoken.client_id, argv[1], strlen(argv[1]));
         memcpy(ctoken.data.sub_data.topic_name, cmd.data(), strlen(cmd.data()));
         std::cin >> cmd;
         ctoken.data.sub_data.sf = cmd[0] == '1';
@@ -185,6 +165,7 @@ int main(int argc, char *argv[]) {
         // Prepare token.
         memset(&ctoken, 0, sizeof(ctoken));
         ctoken.ctype = UNSUB;
+        strncpy(ctoken.client_id, argv[1], strlen(argv[1]));
         memcpy(ctoken.data.sub_data.topic_name, cmd.data(), strlen(cmd.data()));
 
         #ifdef LOG_SU
@@ -231,7 +212,7 @@ int main(int argc, char *argv[]) {
 
       #endif  // LOG_SU
 
-      reliable_receive(sockfd, &ctoken);
+      reliable_receive(sockfd, &ctoken, sizeof(ctoken));
 
       if (ctoken.ctype == DISCONNECT) {
         #ifdef LOG_SU
@@ -267,21 +248,34 @@ int main(int argc, char *argv[]) {
             message += "-";
           
           int *p = (int *)(ctoken.data.message.topic_data.data + 1);
-          message += std::to_string(*p);
+          message += std::to_string(ntohl(*p));
         } else if (ctoken.data.message.topic_data.type == 1) {
           message += "SHORT_REAL - ";
-          if (ctoken.data.message.topic_data.data[0])
-            message += "-";
+
+          uint16_t *p = (uint16_t *)ctoken.data.message.topic_data.data;
           
-          float *p = (float *)(ctoken.data.message.topic_data.data + 1);
-          message += std::to_string(*p);
+          message += std::to_string(ntohs(*p) / 100);
+          if (ntohs(*p) % 100) {
+            message += ".";
+            for (uint8_t i = 1; i <= (2 - (uint8_t)std::to_string(ntohs(*p) % 100).length()); ++i) message += "0";
+            message += std::to_string(ntohs(*p) % 100);
+          }
         } else if (ctoken.data.message.topic_data.type == 2) {
           message += "FLOAT - ";
           if (ctoken.data.message.topic_data.data[0])
             message += "-";
           
-          float *p = (float *)(ctoken.data.message.topic_data.data + 1);
-          message += std::to_string(*p);
+          uint32_t *p = (uint32_t *)(ctoken.data.message.topic_data.data + 1);
+          uint8_t q = *(ctoken.data.message.topic_data.data + 5);
+
+          int e = 1;
+          for (uint8_t i = 1; i <= q; ++i) e *= 10;
+          message += std::to_string(ntohl(*p) / e);
+          if (ntohl(*p) % e) {
+            message += ".";
+            for (uint8_t i = 1; i <= (q - (uint8_t)std::to_string(ntohl(*p) % e).length()); ++i) message += "0";
+            message += std::to_string(ntohl(*p) % e);
+          }
         } else if (ctoken.data.message.topic_data.type == 3) {
           message += "STRING - ";
           message += ctoken.data.message.topic_data.data;

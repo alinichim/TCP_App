@@ -2,11 +2,10 @@
 #ifndef CONFIG_H_
 #define CONFIG_H_
 
-// Used for logging the server.
-#define LOG_SE
-// Used for logging the subscriber.
-#define LOG_SU
-#define LOG_COM
+// Used for logging the server (comment to disable).
+// #define LOG_SE
+// Used for logging the subscriber (comment to disable).
+// #define LOG_SU
 // Server logs file.
 #define LOG_SE_FILE "logs/logs_server.log"
 // Subscriber logs file.
@@ -16,7 +15,7 @@
 #define CLID_SIZE 12
 
 // Chunk size.
-#define CHUNK_SIZE 128
+#define CHUNK_SIZE 1024
 
 // Listening backlog.
 #define BACKLOG 64
