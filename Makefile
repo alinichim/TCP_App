@@ -10,8 +10,8 @@ INCDIR = include
 SRC = $(wildcard $(SRCDIR)/*.cpp)
 OBJ = $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(SRC))
 
-SE_SRC = $(SRCDIR)/logger.cpp
-SU_SRC = $(SRCDIR)/logger.cpp
+SE_SRC = $(SRCDIR)/logger.cpp $(SRCDIR)/conn_funcs.cpp
+SU_SRC = $(SRCDIR)/logger.cpp $(SRCDIR)/conn_funcs.cpp 
 
 SE_OBJ = $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(SE_SRC))
 SU_OBJ = $(patsubst $(SRCDIR)/%.cpp, $(BUILDDIR)/%.o, $(SU_SRC))
