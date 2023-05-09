@@ -19,6 +19,6 @@ int reliable_send(int sockfd, void *data, int data_size);
  * @param data Location to store data.
  * @return Number of packets recieved.
  */
-int reliable_recieve(int sockfd, void *data);
+int reliable_receive(int sockfd, void *data);
 
 #endif  // CONN_FUNCS_H_
