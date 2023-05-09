@@ -9,9 +9,23 @@
 // Server logs file.
 #define LOG_SE_FILE "logs/logs_server.log"
 // Subscriber logs file.
-#define LOG_SU_FILE "logs/logs_subscriber.log"
+#define LOG_SU_FILE "logs/logs_subscriber"
 
 // Clinet ID size.
-#define CLID_SIZE 50
+#define CLID_SIZE 12
+
+// Chunk size.
+#define CHUNK_SIZE 8
+
+// Listening backlog.
+#define BACKLOG 64
+
+// Size of topic name.
+#define TOPIC_NAME_SIZE 50
+// Size of topic data.
+#define TOPIC_DATA_SIZE 1500
+
+// Timeout for polls check.
+#define POLL_TIMEOUT 500
 
 #endif  // CONFIG_H_
