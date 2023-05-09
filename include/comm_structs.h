@@ -31,8 +31,8 @@ struct client_msg {
 
 struct conn_token {
   token_type ctype;  // Connection type.
+  char client_id[CLID_SIZE];
   union {
-    char client_id[CLID_SIZE];
     struct {
       bool sf;
       char topic_name[TOPIC_NAME_SIZE];
