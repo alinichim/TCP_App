@@ -42,3 +42,17 @@ To clean everything, run the command:
 ```
 make clean
 ```
+
+### Running
+
+To run the server:
+
+```
+./server <PORT>
+```
+
+To run the subscriber:
+
+```
+./subscriber <CLIENT_ID> <SERVER_IP> <SERVER_PORT>
+```
